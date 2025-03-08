@@ -141,3 +141,14 @@ def formatSummary(headerString: str, inc_df: pd.DataFrame, des_df: pd.DataFrame,
     if (2000 >= len(headerString) + len(desFull)): return  headerString + desFull
     if (2000 >= len(headerString) + len(desCond)): return  headerString + desCond
     return headerString
+
+def threadSummary(linked_df: pd.DataFrame):
+    summary =f"```\nMatch ID  |🟥🟦🟩"
+    for index, row in linked_df.iterrows():
+        names=row["FID"].split(" ")
+        if (names[1]=="0"):
+            names[1] = ""
+        summary += f"\n"+names[0]+" "+names[1].ljust(3)+" "+names[2].ljust(4)
+        summary +=f"|"+RESULT2SHORTEMOJI.get(row['RRs'],"⚪")+RESULT2SHORTEMOJI.get(row['URs'],"⚪")+RESULT2SHORTEMOJI.get(row['GRs'],"⚪")
+    summary += f"```"
+    return summary

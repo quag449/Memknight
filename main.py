@@ -229,6 +229,27 @@ async def writeup(interaction: discord.Interaction, matchid: str):
             return
         await interaction.followup.send(f"Could not find {fullName}")
 
+@client.tree.command(name="checklinked", description="Check all linked matches to a thread", guild=GUILD_ID)
+@app_commands.describe(
+    privacystatus='Force the status of the response',
+)
+async def checkLinked(interaction: discord.Interaction, privacystatus:typing.Literal['Private','Public']='Public'):
+    try:
+        validThread = (interaction.channel.parent_id == MATCH_THREADS_ID.id)
+    except:
+        validThread = False
+    if (not validThread):
+        await interaction.response.send_message("checklinked can only be used in a thread in guru-match-help", ephemeral=True)
+        return
+    else:
+        await interaction.response.defer(ephemeral=(privacystatus=='Private'))
+        df = pd.DataFrame(matchSheet.get_all_records())
+        thread_df = df[df['TLink'] == interaction.channel.id]
+        if(len(thread_df)>0):
+            await interaction.followup.send(threadSummary(thread_df))
+        else:
+            await interaction.followup.send("No matches are linked to this thread")       
+
 @client.tree.command(name="ulink", description="Remove all linked threads threads for a match", guild=GUILD_ID)
 @app_commands.describe(matchid='Match ID for the match to be unlinked')
 async def ulink(interaction: discord.Interaction, matchid: str):
@@ -316,7 +337,7 @@ async def unregisterGuru(interaction: discord.Interaction, signature: str):
 
 @client.tree.command(name="discrepancyurl", description="Gives URL to Guru Match Hub", guild=GUILD_ID)
 async def discrepancyUrl(interaction: discord.Interaction):
-    await interaction.response.send_message(f"https://docs.google.com/spreadsheets/d/13EZdVCNI6yZMzAqlVC_JvDm0EoFH7BEFPBJ_rRAifp8/edit?usp=sharing", ephemeral=True)
+    await interaction.response.send_message(f"https://docs.google.com/spreadsheets/d/1D_Qba4IxA__HkJzNZneJi-aIvL0p5aGChWBYktJWiL4/edit?usp=sharing", ephemeral=True)
 
 @client.tree.command(name="help", description="Information about Memknight commands", guild=GUILD_ID)
 @app_commands.describe(
