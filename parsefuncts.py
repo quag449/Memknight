@@ -2,7 +2,20 @@ import re
 import pandas as pd
 from strings import *
 
-def parseMatchID(input: str): 
+def parseMatchID(input: str):
+    """
+    Parses strings as one of several common Match id formats.
+
+    Args:
+        input: The string to parse.
+
+    Returns:
+        Returns a 4-tuple. If the match fails to parse, all returns will be -1
+            podLetter: The one-letter code for the pod type
+            podNumber: The roman neumeral of the pod number. The one Exemplar pod has pod number 0.
+            matchNumber: The decimal match number
+            fullName: A string name of the match using the full name of the pod type, a roman numeral if not Exemplar, and the decimal match number
+    """
     chunks = input.split()
     match len(chunks):
         case 3:
@@ -23,6 +36,18 @@ def parseMatchID(input: str):
     return podLetter, podNumber, matchNumber, fullName+" "+matchNumber
 
 def parsePodID(input: str):
+    """
+    Parses strings as one of several common Pod id formats.
+
+    Args:
+        input: The string to parse.
+
+    Returns:
+        Returns a 3-tuple. If the match fails to parse, all returns will be -1
+            podLetter: The one-letter code for the pod type
+            podNumber: The roman neumeral of the pod number. The one Exemplar pod has pod number 0.
+            fullName: A string name of the match using the full name of the pod type and a roman numeral if not Exemplar
+    """
     if (input.upper() == "E" or input.upper() == "EXEMPLAR"or input.upper() == "EX"):
         return "E", "0", "Exemplar"
     chunks = input.split()
@@ -54,6 +79,17 @@ def parsePodID(input: str):
     return podLetter, podNumber, fullName
 
 def formatMatch(matchData: dict, ping: bool, allGurus: pd.DataFrame=None):
+    """
+    Formats a match's data into a discord mesage summary
+
+    Args:
+        matchData: A dictionary of match data, as returned by getMatchData
+        ping: A boolean that if true will attemp to turn any signatures into pings of the guru registered to that signature
+        allGurus: A DataFrame used to match guru signatures to discord IDs
+
+    Returns:
+        A string formated to be a discord message as used by /getmatch and others.
+    """
     if (not matchData["matchExists"]): return
     guruR = matchData["guruR"] if matchData["guruR"] else "**None**"
     guruU = matchData["guruU"] if matchData["guruU"] else "**None**"
@@ -68,6 +104,32 @@ def formatMatch(matchData: dict, ping: bool, allGurus: pd.DataFrame=None):
     return matchSummary
 
 def getMatchData(podLetter: str, podNumber: str, matchNumber: str, allMatches: pd.DataFrame):
+    """
+    Pulls match data from a specified match up from the provided match data DatFrame
+
+    Args:
+        podLetter: The one-letter code for the pod type of the match to pull
+        podNumber: The roman neumeral pod number, or 0-if the pod is Exemplar, of the match to pull
+        matchNumber: The match ID number of the match to pull
+        allMatches: A dataframe of all match result data
+
+    Returns:
+        Returns a dictionary. If the match is not found, matchExists with be the only parameter and will be set to false. Otherwise, it will have
+            matchExists: Will be True if the match is found 
+            deckA: String of P1's deck
+            deckB: String of P2's deck
+            resultR: The emoji + W/T/L/- of the red guru's result
+            guruR: The red guru's signature
+            resultU: The emoji + W/T/L/- of the blue guru's result
+            guruU: The blue guru's signature
+            resultG: The emoji + W/T/L/- of the green guru's result
+            guruG: The green guru's signature
+            result: The string of the total result, which can be 0, 0.5, 1, incomplete, or discrepancy
+            inverseID: The full name of the inverse match
+            inverseEmoji: The emoji + W/T/L/- of the inverse match's result
+            linkedID: The ID of the thread linked to this match, if one exists
+            rowNumber: The row in the google sheet this match is in
+    """
     matchID = podLetter+" "+podNumber+" "+matchNumber
     rowIndex = (allMatches.index[allMatches['FID'] == matchID]).values
     if (len(rowIndex) != 1): return {"matchExists": False}
@@ -101,6 +163,17 @@ def getMatchData(podLetter: str, podNumber: str, matchNumber: str, allMatches: p
     }
 
 def getGuruString(guru: str, ping: bool, allGurus: pd.DataFrame=None):
+    """
+    Turns guru signatures into the string to be used in the discord message
+
+    Args:
+        guru: The signature
+        ping: A boolean that if true will attemp to turn the into pings of the guru registered to that signature
+        allGurus: A DataFrame used to match guru signatures to discord IDs
+
+    Returns:
+        A sting. If ping is false, it will return exactly the input signature.
+    """
     if(not ping): return guru
     try:
         strippedGuru = guru.strip().casefold()
@@ -111,6 +184,22 @@ def getGuruString(guru: str, ping: bool, allGurus: pd.DataFrame=None):
         return guru
 
 def formatSummary(headerString: str, inc_df: pd.DataFrame, des_df: pd.DataFrame, incudePodID: bool, skipInc: bool, incName: str):
+    """
+    Creates a summary message from DataFrames of incomplete and discrepancy matches.
+
+    Args:
+        headerString: The string to be the first line of the discord message
+        inc_df: DataFrame of of matches that have not been completed
+        des_df: DataFrame of of matches that are discrepancies
+        incudePodID: A boolean for if the Pod ID should be used to identify matches
+        skipInc: A boolen to not list any incomplete matches, even if it could fit
+        incName: What to call incomplete matches
+
+    Returns:
+        A string formated for a discord mesage of the header string followed by a listing of the matches and linked threads as space allows.
+        Will attemp to return a message no longer than 2000 charactrers per discord limits, returning the header sting if none fit.
+        Read more about the choices made to limit mesage size in the bot documentation. 
+    """
     if(len(des_df) <= 25 and len(des_df) > 0):
         desFull = desCond = f"\nDiscrepancies"
         for index, row in des_df.iterrows():
@@ -143,6 +232,15 @@ def formatSummary(headerString: str, inc_df: pd.DataFrame, des_df: pd.DataFrame,
     return headerString
 
 def threadSummary(linked_df: pd.DataFrame):
+    """
+    Lists each guru's result on all provided matches in an extremely compact discord mesage format.
+
+    Args:
+        linked_df: A DataFrame of the matches to list.
+
+    Returns:
+        Returns a monospaced formated discord mesage as a small grid listing all matches and each guru's result.
+    """
     summary =f"```\nMatch ID  |🟥🟦🟩"
     for index, row in linked_df.iterrows():
         names=row["FID"].split(" ")

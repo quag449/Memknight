@@ -337,7 +337,7 @@ async def unregisterGuru(interaction: discord.Interaction, signature: str):
 
 @client.tree.command(name="discrepancyurl", description="Gives URL to Guru Match Hub", guild=GUILD_ID)
 async def discrepancyUrl(interaction: discord.Interaction):
-    await interaction.response.send_message(f"https://docs.google.com/spreadsheets/d/1D_Qba4IxA__HkJzNZneJi-aIvL0p5aGChWBYktJWiL4/edit?usp=sharing", ephemeral=True)
+    await interaction.response.send_message(f"https://docs.google.com/spreadsheets/d/"+os.getenv('HUB_KEY')+ f"/edit?usp=sharing", ephemeral=True)
 
 @client.tree.command(name="help", description="Information about Memknight commands", guild=GUILD_ID)
 @app_commands.describe(
